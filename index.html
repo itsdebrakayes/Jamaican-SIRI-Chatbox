@@ -1,91 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jamaican AI - Yuh Digital Bredrin</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jamaican AI Chat</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <!-- Mobile Overlay -->
-    <div class="overlay"></div>
-
-```
-<div class="main-container">
+  <div class="chat-app">
     <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-title">
-                <span>🇯🇲</span>
-                <span>Chat History</span>
-            </div>
-            <button class="toggle-sidebar">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
-        
-        <button class="new-chat-btn">
-            <i class="fas fa-plus"></i>
-            <span>New Chat</span>
-        </button>
-        
-        <div class="chat-history">
-            <div class="chat-list">
-                <!-- Chat history items will be populated by JavaScript -->
-            </div>
-        </div>
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2>Chat History</h2>
+        <button class="close-sidebar" onclick="toggleSidebar()">×</button>
+      </div>
+      <ul class="chat-list">
+        <!-- Future chat history -->
+        <li>Conversation 1</li>
+        <li>Conversation 2</li>
+      </ul>
     </div>
 
-    <!-- Main Chat Container -->
+    <!-- Main Chat Area -->
     <div class="chat-container">
-        <!-- Header -->
-        <div class="header">
-            <button class="mobile-sidebar-toggle">
-                <i class="fas fa-bars"></i>
-            </button>
-            <div class="header-content">
-                <h1>🇯🇲 Jamaican AI</h1>
-                <p>Yuh digital bredrin weh deh yah fi help!</p>
-            </div>
+      <div class="chat-header">
+        <button class="menu-button" onclick="toggleSidebar()">☰</button>
+        <h1>Jamaican AI</h1>
+      </div>
+
+      <div class="welcome-message">
+        <h2>Wah gwaan! Mi deh yah fi help yuh.</h2>
+        <p>Try ask mi sumting like:</p>
+        <div class="suggestions">
+          <button>How yuh seh "Good morning" in patois?</button>
+          <button>Wah di weather like a Kingston?</button>
+          <button>Tell mi a Jamaican joke</button>
         </div>
-        
-        <!-- Chat Messages -->
-        <div class="chat-messages">
-            <!-- Welcome Message -->
-            <div class="welcome-message">
-                <div class="welcome-icon">🇯🇲</div>
-                <h2>Welcome to Jamaican AI!</h2>
-                <p>Wah gwaan! Mi name Jamaican AI and mi deh yah fi help yuh with anyting yuh need. Ask mi anyting bout Jamaica, culture, food, music, or any other ting!</p>
-                
-                <div class="suggestion-chips">
-                    <div class="suggestion-chip">Tell mi bout Jamaican food</div>
-                    <div class="suggestion-chip">Wah gwaan with the music scene?</div>
-                    <div class="suggestion-chip">Best places fi visit inna Jamaica</div>
-                    <div class="suggestion-chip">Teach mi some patois</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Input Container -->
-        <div class="input-container">
-            <div class="input-wrapper">
-                <textarea id="messageInput" class="message-input" placeholder="Type yuh message here..." rows="1" maxlength="2000"></textarea>
-                <div class="input-actions">
-                    <button class="voice-btn" title="Voice input">
-                        <i class="fas fa-microphone"></i>
-                    </button>
-                    <button class="send-btn" title="Send message" disabled>
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
+      </div>
+
+      <div class="chat-box">
+        <!-- Messages will show up here -->
+      </div>
+
+      <div class="input-container">
+        <input type="text" id="userInput" placeholder="Type your message..." />
+        <button id="sendButton">Send</button>
+      </div>
     </div>
-</div>
-
-<script src="script.js"></script>
-```
-
+  </div>
+  <script src="script.js"></script>
 </body>
 </html>

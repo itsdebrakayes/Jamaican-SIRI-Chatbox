@@ -129,6 +129,35 @@ function sendMessage() {
     }, 600);
 }
 
+// Toggle sidebar on mobile
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("open");
+}
+
+// Send button logic
+document.getElementById("sendButton").addEventListener("click", function () {
+  const input = document.getElementById("userInput");
+  const message = input.value.trim();
+  if (message !== "") {
+    addMessage("user", message);
+    input.value = "";
+    // Simulated bot response
+    setTimeout(() => {
+      addMessage("bot", "Mi hear yuh! But mi nuh ready fi chat yet.");
+    }, 1000);
+  }
+});
+
+// Add message to chat box
+function addMessage(sender, text) {
+  const chatBox = document.querySelector(".chat-box");
+  const messageDiv = document.createElement("div");
+  messageDiv.classList.add("message", sender === "user" ? "user-message" : "bot-message");
+  messageDiv.textContent = text;
+  chatBox.appendChild(messageDiv);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
 // Enable send button only if message isn't empty
 messageInput.addEventListener('input', () => {
     sendBtn.disabled = messageInput.value.trim().length === 0;
