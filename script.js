@@ -1,151 +1,85 @@
-// Jamaican AI - Frontend JavaScript Implementation
-// Updated for First Edition Style with Advanced Features
-
-class JamaicanAI {
+// Chat Application JavaScript
+class ChatApp {
     constructor() {
-        this.chatHistory = [];
+        this.chats = [];
         this.currentChatId = null;
-        this.savedChats = this.getSavedChats();
-        this.isListening = false;
-        this.recognition = null;
-        this.synth = window.speechSynthesis;
-        this.isWaitingForResponse = false;
-        
+        this.messageHistory = new Map();
         this.init();
     }
-    
-    // Use in-memory storage instead of localStorage for artifact compatibility
-    getSavedChats() {
-        // In a real implementation, this would connect to your backend
-        return [];
-    }
-    
-    saveChatData() {
-        // In a real implementation, this would save to your backend
-        console.log('Saving chat data:', this.savedChats);
-    }
-    
+
     init() {
-        this.setupEventListeners();
-        this.setupSpeechRecognition();
-        this.loadChatHistory();
-        this.displayWelcomeMessage();
+        this.bindEvents();
+        this.loadChats();
+        this.setupWelcomeScreen();
+        this.autoResizeTextarea();
     }
-    
-    setupEventListeners() {
-        // Sidebar toggles
-        const sidebarToggle = document.querySelector('.toggle-sidebar');
+
+    bindEvents() {
+        // Sidebar toggle events
+        const toggleSidebarBtn = document.querySelector('.toggle-sidebar');
         const mobileSidebarToggle = document.querySelector('.mobile-sidebar-toggle');
-        
-        if (sidebarToggle) {
-            sidebarToggle.addEventListener('click', () => this.toggleSidebar());
-        }
-        
-        if (mobileSidebarToggle) {
-            mobileSidebarToggle.addEventListener('click', () => this.toggleMobileSidebar());
-        }
-        
-        // Overlay click
         const overlay = document.querySelector('.overlay');
-        if (overlay) {
-            overlay.addEventListener('click', () => this.closeMobileSidebar());
+        const sidebar = document.querySelector('.sidebar');
+
+        if (toggleSidebarBtn) {
+            toggleSidebarBtn.addEventListener('click', () => this.toggleSidebar());
         }
-        
-        // New chat buttons
+
+        if (mobileSidebarToggle) {
+            mobileSidebarToggle.addEventListener('click', () => this.toggleSidebar());
+        }
+
+        if (overlay) {
+            overlay.addEventListener('click', () => this.closeSidebar());
+        }
+
+        // New chat button
         const newChatBtn = document.querySelector('.new-chat-btn');
         if (newChatBtn) {
-            newChatBtn.addEventListener('click', () => this.startNewChat());
+            newChatBtn.addEventListener('click', () => this.createNewChat());
         }
-        
-        // Message input handling
+
+        // Message input events
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.querySelector('.send-btn');
-        
+        const voiceBtn = document.querySelector('.voice-btn');
+
         if (messageInput) {
-            messageInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    this.sendMessage();
-                }
-            });
-            
-            messageInput.addEventListener('input', () => {
-                this.autoResizeTextarea();
-                this.toggleSendButton();
+            messageInput.addEventListener('keydown', (e) => this.handleKeyPress(e));
+            messageInput.addEventListener('input', () => this.handleInputChange());
+            messageInput.addEventListener('paste', () => {
+                setTimeout(() => this.autoResizeTextarea(), 0);
             });
         }
-        
+
         if (sendBtn) {
             sendBtn.addEventListener('click', () => this.sendMessage());
         }
-        
-        // Voice recognition button
-        const voiceBtn = document.querySelector('.voice-btn');
+
         if (voiceBtn) {
-            voiceBtn.addEventListener('click', () => this.toggleVoiceRecognition());
+            voiceBtn.addEventListener('click', () => this.toggleVoiceInput());
         }
-        
-        // Suggestion chips click handler
+
+        // Suggestion chips
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('suggestion-chip')) {
-                const message = e.target.textContent;
-                this.sendMessage(message);
+                this.handleSuggestionClick(e.target.textContent);
             }
         });
-        
-        // Message action buttons
+
+        // Chat item clicks
         document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('copy-btn') || e.target.closest('.copy-btn')) {
-                this.copyMessage(e.target.closest('.copy-btn') || e.target);
-            }
-            if (e.target.classList.contains('regenerate-btn') || e.target.closest('.regenerate-btn')) {
-                this.regenerateResponse();
-            }
-            if (e.target.classList.contains('speak-btn') || e.target.closest('.speak-btn')) {
-                const messageContent = e.target.closest('.message-content');
-                const text = this.extractTextFromMessage(messageContent);
-                this.speakResponse(text);
+            if (e.target.classList.contains('chat-item')) {
+                const chatId = e.target.dataset.chatId;
+                this.switchToChat(chatId);
             }
         });
+
+        // Handle window resize
+        window.addEventListener('resize', () => this.handleResize());
     }
-    
-    setupSpeechRecognition() {
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            this.recognition = new SpeechRecognition();
-            this.recognition.continuous = false;
-            this.recognition.interimResults = false;
-            this.recognition.lang = 'en-US';
-            
-            this.recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                document.getElementById('messageInput').value = transcript;
-                this.autoResizeTextarea();
-                this.toggleSendButton();
-            };
-            
-            this.recognition.onend = () => {
-                this.isListening = false;
-                this.updateVoiceButton();
-            };
-            
-            this.recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
-                this.isListening = false;
-                this.updateVoiceButton();
-            };
-        }
-    }
-    
-    // UI Control Methods
+
     toggleSidebar() {
-        const sidebar = document.querySelector('.sidebar');
-        if (sidebar) {
-            sidebar.classList.toggle('collapsed');
-        }
-    }
-    
-    toggleMobileSidebar() {
         const sidebar = document.querySelector('.sidebar');
         const overlay = document.querySelector('.overlay');
         
@@ -154,8 +88,8 @@ class JamaicanAI {
             overlay.classList.toggle('show');
         }
     }
-    
-    closeMobileSidebar() {
+
+    closeSidebar() {
         const sidebar = document.querySelector('.sidebar');
         const overlay = document.querySelector('.overlay');
         
@@ -164,544 +98,407 @@ class JamaicanAI {
             overlay.classList.remove('show');
         }
     }
-    
-    autoResizeTextarea() {
-        const textarea = document.getElementById('messageInput');
-        if (textarea) {
-            textarea.style.height = 'auto';
-            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+
+    handleResize() {
+        // Close sidebar on desktop view
+        if (window.innerWidth > 768) {
+            this.closeSidebar();
         }
     }
-    
-    toggleSendButton() {
-        const sendBtn = document.querySelector('.send-btn');
-        const messageInput = document.getElementById('messageInput');
+
+    createNewChat() {
+        const chatId = 'chat_' + Date.now();
+        const newChat = {
+            id: chatId,
+            title: 'New Chat',
+            timestamp: new Date(),
+            messages: []
+        };
+
+        this.chats.unshift(newChat);
+        this.messageHistory.set(chatId, []);
+        this.currentChatId = chatId;
         
-        if (sendBtn && messageInput) {
-            const hasText = messageInput.value.trim().length > 0;
-            sendBtn.disabled = !hasText || this.isWaitingForResponse;
-        }
+        this.updateChatList();
+        this.setupWelcomeScreen();
+        this.closeSidebar();
+        this.saveChats();
+        
+        this.showNotification('New chat created');
     }
-    
-    // Voice Recognition Methods
-    toggleVoiceRecognition() {
-        if (!this.recognition) {
-            this.showNotification('Speech recognition not supported in this browser', 'error');
-            return;
-        }
+
+    switchToChat(chatId) {
+        this.currentChatId = chatId;
+        this.loadChatMessages(chatId);
+        this.updateChatList();
+        this.closeSidebar();
+    }
+
+    loadChatMessages(chatId) {
+        const messages = this.messageHistory.get(chatId) || [];
+        const messagesContainer = document.querySelector('.chat-messages');
         
-        if (this.isListening) {
-            this.recognition.stop();
+        if (!messagesContainer) return;
+
+        if (messages.length === 0) {
+            this.setupWelcomeScreen();
         } else {
-            this.recognition.start();
-            this.isListening = true;
-            this.updateVoiceButton();
+            messagesContainer.innerHTML = '';
+            messages.forEach(message => {
+                this.displayMessage(message.content, message.type, false);
+            });
+            this.scrollToBottom();
         }
     }
-    
-    updateVoiceButton() {
-        const voiceBtn = document.querySelector('.voice-btn');
-        if (voiceBtn) {
-            const icon = voiceBtn.querySelector('i');
-            if (icon) {
-                icon.className = this.isListening ? 'fas fa-stop' : 'fas fa-microphone';
-            }
-            voiceBtn.style.color = this.isListening ? '#ef4444' : '';
-        }
-    }
-    
-    speakResponse(text) {
-        if (this.synth && text) {
-            this.synth.cancel();
-            
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.rate = 0.9;
-            utterance.pitch = 1.1;
-            utterance.volume = 0.8;
-            
-            // Try to find a suitable voice
-            const voices = this.synth.getVoices();
-            const preferredVoice = voices.find(voice => 
-                voice.name.includes('English') && 
-                (voice.name.includes('US') || voice.name.includes('UK'))
-            );
-            
-            if (preferredVoice) {
-                utterance.voice = preferredVoice;
-            }
-            
-            this.synth.speak(utterance);
-        }
-    }
-    
-    // Chat Management Methods
-    startNewChat() {
-        this.currentChatId = Date.now().toString();
-        this.chatHistory = [];
-        this.clearChatMessages();
-        this.displayWelcomeMessage();
-        this.updateActiveChatItem(null);
-        this.closeMobileSidebar();
-    }
-    
-    displayWelcomeMessage() {
-        const welcomeMessage = document.querySelector('.welcome-message');
-        if (welcomeMessage) {
-            welcomeMessage.style.display = 'block';
-        }
-    }
-    
-    hideWelcomeMessage() {
-        const welcomeMessage = document.querySelector('.welcome-message');
-        if (welcomeMessage) {
-            welcomeMessage.style.display = 'none';
-        }
-    }
-    
-    clearChatMessages() {
-        const chatMessages = document.querySelector('.chat-messages');
-        if (chatMessages) {
-            const welcomeMessage = chatMessages.querySelector('.welcome-message');
-            chatMessages.innerHTML = '';
-            if (welcomeMessage) {
-                chatMessages.appendChild(welcomeMessage);
-            }
-        }
-    }
-    
-    loadChatHistory() {
-        this.updateChatSidebar();
-    }
-    
-    updateChatSidebar() {
+
+    updateChatList() {
         const chatList = document.querySelector('.chat-list');
         if (!chatList) return;
-        
+
         chatList.innerHTML = '';
-        
-        this.savedChats.forEach(chat => {
-            const chatItem = this.createChatItem(chat);
+
+        this.chats.forEach(chat => {
+            const chatItem = document.createElement('div');
+            chatItem.className = 'chat-item';
+            if (chat.id === this.currentChatId) {
+                chatItem.classList.add('active');
+            }
+            chatItem.dataset.chatId = chat.id;
+            chatItem.textContent = chat.title;
             chatList.appendChild(chatItem);
         });
     }
-    
-    createChatItem(chat) {
-        const item = document.createElement('div');
-        item.className = 'chat-item';
-        item.dataset.chatId = chat.id;
-        
-        const title = chat.title || 'New Chat';
-        const timestamp = new Date(chat.timestamp).toLocaleDateString();
-        
-        item.innerHTML = `
-            <div class="chat-item-content">
-                <div class="chat-title">${this.escapeHtml(title)}</div>
-                <div class="chat-timestamp">${timestamp}</div>
-            </div>
-            <div class="chat-actions">
-                <button class="chat-action-btn delete-chat" data-chat-id="${chat.id}">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `;
-        
-        item.addEventListener('click', (e) => {
-            if (!e.target.closest('.chat-actions')) {
-                this.loadChat(chat.id);
-            }
-        });
-        
-        const deleteBtn = item.querySelector('.delete-chat');
-        deleteBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.deleteChat(chat.id);
-        });
-        
-        return item;
-    }
-    
-    updateActiveChatItem(chatId) {
-        const chatItems = document.querySelectorAll('.chat-item');
-        chatItems.forEach(item => {
-            item.classList.toggle('active', item.dataset.chatId === chatId);
-        });
-    }
-    
-    loadChat(chatId) {
-        const chat = this.savedChats.find(c => c.id === chatId);
-        if (!chat) return;
-        
-        this.currentChatId = chatId;
-        this.chatHistory = [...chat.messages];
-        this.renderChatHistory();
-        this.updateActiveChatItem(chatId);
-        this.closeMobileSidebar();
-    }
-    
-    deleteChat(chatId) {
-        if (confirm('Are you sure you want to delete this chat?')) {
-            this.savedChats = this.savedChats.filter(c => c.id !== chatId);
-            this.saveChatData();
-            this.updateChatSidebar();
-            
-            if (this.currentChatId === chatId) {
-                this.startNewChat();
-            }
-        }
-    }
-    
-    renderChatHistory() {
-        this.hideWelcomeMessage();
-        const chatMessages = document.querySelector('.chat-messages');
-        if (!chatMessages) return;
-        
-        chatMessages.innerHTML = '';
-        
-        this.chatHistory.forEach(message => {
-            const messageElement = this.createMessageElement(message);
-            chatMessages.appendChild(messageElement);
-        });
-        
-        this.scrollToBottom();
-    }
-    
-    // Message Handling Methods
-    async sendMessage(messageText = null) {
-        const messageInput = document.getElementById('messageInput');
-        const message = messageText || messageInput?.value.trim();
-        
-        if (!message || this.isWaitingForResponse) return;
-        
-        // Clear input and hide welcome message
-        if (messageInput) {
-            messageInput.value = '';
-            this.autoResizeTextarea();
-        }
-        this.hideWelcomeMessage();
-        this.toggleSendButton();
-        
-        // Add user message to chat
-        const userMessage = {
-            id: Date.now().toString(),
-            type: 'user',
-            content: message,
-            timestamp: new Date()
-        };
-        
-        this.chatHistory.push(userMessage);
-        this.addMessageToChat(userMessage);
-        
-        // Show typing indicator
-        this.showTypingIndicator();
-        this.isWaitingForResponse = true;
-        
-        try {
-            // Simulate AI response (replace with actual API call)
-            const response = await this.getAIResponse(message);
-            
-            const aiMessage = {
-                id: (Date.now() + 1).toString(),
-                type: 'assistant',
-                content: response,
-                timestamp: new Date()
-            };
-            
-            this.chatHistory.push(aiMessage);
-            this.hideTypingIndicator();
-            this.addMessageToChat(aiMessage);
-            
-            // Save chat
-            this.saveCurrentChat();
-            
-        } catch (error) {
-            console.error('Error getting AI response:', error);
-            this.hideTypingIndicator();
-            this.showNotification('Sorry, there was an error processing your message', 'error');
-        } finally {
-            this.isWaitingForResponse = false;
-            this.toggleSendButton();
-        }
-    }
-    
-    async getAIResponse(message) {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-        
-        // Simple response generation (replace with actual AI API)
-        const responses = [
-            "Wah gwaan! Mi understand yuh question. Let mi help yuh with dat.",
-            "Bredrin, dat's a good question! Mi a go explain it fi yuh.",
-            "Big up yuself! Mi see weh yuh a ask bout. Check dis out...",
-            "Yuh know say mi always ready fi help! Here's weh mi think bout dat.",
-            "Respect! Dat's something weh nuff people wonder bout. Let mi break it down fi yuh."
-        ];
-        
-        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-        
-        // Add some context based on the message
-        let contextualResponse = randomResponse;
-        if (message.toLowerCase().includes('hello') || message.toLowerCase().includes('hi')) {
-            contextualResponse = "Wah gwaan, bredrin! How yuh doing today? Mi ready fi help yuh with anything yuh need!";
-        } else if (message.toLowerCase().includes('thanks') || message.toLowerCase().includes('thank you')) {
-            contextualResponse = "No problem at all, mi friend! Mi glad fi help yuh. Anytime yuh need something, just holla at mi!";
-        }
-        
-        return contextualResponse;
-    }
-    
-    addMessageToChat(message) {
-        const chatMessages = document.querySelector('.chat-messages');
-        if (!chatMessages) return;
-        
-        const messageElement = this.createMessageElement(message);
-        chatMessages.appendChild(messageElement);
-        this.scrollToBottom();
-    }
-    
-    createMessageElement(message) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${message.type}`;
-        messageDiv.dataset.messageId = message.id;
-        
-        const avatar = message.type === 'user' ? 
-            '<div class="avatar user-avatar"><i class="fas fa-user"></i></div>' :
-            '<div class="avatar ai-avatar"><i class="fas fa-robot"></i></div>';
-        
-        const actions = message.type === 'assistant' ? `
-            <div class="message-actions">
-                <button class="action-btn copy-btn" title="Copy message">
-                    <i class="fas fa-copy"></i>
-                </button>
-                <button class="action-btn speak-btn" title="Read aloud">
-                    <i class="fas fa-volume-up"></i>
-                </button>
-                <button class="action-btn regenerate-btn" title="Regenerate response">
-                    <i class="fas fa-redo"></i>
-                </button>
-            </div>
-        ` : '';
-        
-        messageDiv.innerHTML = `
-            ${avatar}
-            <div class="message-content">
-                <div class="message-text">${this.formatMessage(message.content)}</div>
-                <div class="message-timestamp">${this.formatTimestamp(message.timestamp)}</div>
-                ${actions}
-            </div>
-        `;
-        
-        return messageDiv;
-    }
-    
-    formatMessage(text) {
-        // Basic formatting - convert newlines to <br> and handle basic markdown-like syntax
-        return this.escapeHtml(text)
-            .replace(/\n/g, '<br>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/`(.*?)`/g, '<code>$1</code>');
-    }
-    
-    formatTimestamp(timestamp) {
-        const date = new Date(timestamp);
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-    
-    showTypingIndicator() {
-        const chatMessages = document.querySelector('.chat-messages');
-        if (!chatMessages) return;
-        
-        const typingDiv = document.createElement('div');
-        typingDiv.className = 'message assistant typing-indicator';
-        typingDiv.innerHTML = `
-            <div class="avatar ai-avatar"><i class="fas fa-robot"></i></div>
-            <div class="message-content">
-                <div class="typing-dots">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+
+    setupWelcomeScreen() {
+        const messagesContainer = document.querySelector('.chat-messages');
+        if (!messagesContainer) return;
+
+        messagesContainer.innerHTML = `
+            <div class="welcome-message">
+                <div class="welcome-header">
+                    <div class="welcome-avatar">🇯🇲</div>
+                    <div>
+                        <div class="welcome-title">Welcome to JamAI</div>
+                        <div class="welcome-subtitle">Your Jamaican AI Assistant</div>
+                    </div>
+                </div>
+                <div class="welcome-text">
+                    Hello! I'm your Jamaican AI assistant, ready to help you with questions, creative tasks, 
+                    and conversations. Feel free to ask me anything or try one of the suggestions below.
+                </div>
+                <div class="suggestion-chips">
+                    <div class="suggestion-chip">Tell me about Jamaican culture</div>
+                    <div class="suggestion-chip">Help me write something creative</div>
+                    <div class="suggestion-chip">Explain a complex topic</div>
+                    <div class="suggestion-chip">Plan my day</div>
+                    <div class="suggestion-chip">Generate some ideas</div>
                 </div>
             </div>
         `;
+    }
+
+    handleSuggestionClick(suggestion) {
+        const messageInput = document.getElementById('messageInput');
+        if (messageInput) {
+            messageInput.value = suggestion;
+            messageInput.focus();
+            this.handleInputChange();
+            this.autoResizeTextarea();
+        }
+    }
+
+    handleKeyPress(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            this.sendMessage();
+        }
+    }
+
+    handleInputChange() {
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.querySelector('.send-btn');
         
-        chatMessages.appendChild(typingDiv);
+        if (messageInput && sendBtn) {
+            const hasContent = messageInput.value.trim().length > 0;
+            sendBtn.disabled = !hasContent;
+            
+            // Update send button appearance
+            if (hasContent) {
+                sendBtn.style.background = 'linear-gradient(135deg, #007AFF, #0051D5)';
+                sendBtn.style.color = 'white';
+            } else {
+                sendBtn.style.background = 'rgba(0, 0, 0, 0.1)';
+                sendBtn.style.color = '#ccc';
+            }
+        }
+        
+        this.autoResizeTextarea();
+    }
+
+    autoResizeTextarea() {
+        const messageInput = document.getElementById('messageInput');
+        if (!messageInput) return;
+
+        // Reset height to auto to get the correct scrollHeight
+        messageInput.style.height = 'auto';
+        
+        // Set height based on content, with min and max constraints
+        const scrollHeight = messageInput.scrollHeight;
+        const minHeight = 20;
+        const maxHeight = 120;
+        
+        const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
+        messageInput.style.height = newHeight + 'px';
+    }
+
+    async sendMessage() {
+        const messageInput = document.getElementById('messageInput');
+        if (!messageInput) return;
+
+        const content = messageInput.value.trim();
+        if (!content) return;
+
+        // Clear input and disable send button
+        messageInput.value = '';
+        this.handleInputChange();
+
+        // Ensure we have a current chat
+        if (!this.currentChatId) {
+            this.createNewChat();
+        }
+
+        // Display user message
+        this.displayMessage(content, 'user');
+        this.storeMessage(content, 'user');
+
+        // Update chat title if it's the first message
+        this.updateChatTitle(content);
+
+        // Show typing indicator
+        this.showTypingIndicator();
+
+        try {
+            // Simulate AI response (replace with actual AI integration)
+            const response = await this.getAIResponse(content);
+            
+            // Remove typing indicator
+            this.hideTypingIndicator();
+            
+            // Display AI response
+            this.displayMessage(response, 'ai');
+            this.storeMessage(response, 'ai');
+            
+        } catch (error) {
+            this.hideTypingIndicator();
+            this.displayMessage('Sorry, I encountered an error. Please try again.', 'ai');
+            this.showNotification('Error sending message', 'error');
+        }
+
+        // Focus back on input
+        messageInput.focus();
+    }
+
+    displayMessage(content, type, shouldScroll = true) {
+        const messagesContainer = document.querySelector('.chat-messages');
+        if (!messagesContainer) return;
+
+        // Remove welcome message if it exists
+        const welcomeMessage = messagesContainer.querySelector('.welcome-message');
+        if (welcomeMessage) {
+            welcomeMessage.remove();
+        }
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content';
+        messageContent.textContent = content;
+        
+        messageDiv.appendChild(messageContent);
+        messagesContainer.appendChild(messageDiv);
+
+        if (shouldScroll) {
+            this.scrollToBottom();
+        }
+    }
+
+    showTypingIndicator() {
+        const messagesContainer = document.querySelector('.chat-messages');
+        if (!messagesContainer) return;
+
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message ai typing-message';
+        typingDiv.innerHTML = `
+            <div class="message-content typing-indicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        `;
+        
+        messagesContainer.appendChild(typingDiv);
         this.scrollToBottom();
     }
-    
+
     hideTypingIndicator() {
-        const typingIndicator = document.querySelector('.typing-indicator');
-        if (typingIndicator) {
-            typingIndicator.remove();
+        const typingMessage = document.querySelector('.typing-message');
+        if (typingMessage) {
+            typingMessage.remove();
         }
     }
-    
+
+    storeMessage(content, type) {
+        if (!this.currentChatId) return;
+
+        const messages = this.messageHistory.get(this.currentChatId) || [];
+        messages.push({
+            content,
+            type,
+            timestamp: new Date()
+        });
+        
+        this.messageHistory.set(this.currentChatId, messages);
+        this.saveChats();
+    }
+
+    updateChatTitle(firstMessage) {
+        const chat = this.chats.find(c => c.id === this.currentChatId);
+        if (chat && chat.title === 'New Chat') {
+            // Use first few words of the message as title
+            const words = firstMessage.split(' ').slice(0, 4);
+            chat.title = words.join(' ') + (firstMessage.split(' ').length > 4 ? '...' : '');
+            this.updateChatList();
+            this.saveChats();
+        }
+    }
+
+    async getAIResponse(userMessage) {
+        // Simulate AI processing time
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+
+        // Simple response generation (replace with actual AI integration)
+        const responses = [
+            "That's an interesting question! Let me think about that...",
+            "I understand what you're asking. Here's my perspective...",
+            "Great point! I'd be happy to help you with that.",
+            "That's a fascinating topic. Let me break it down for you...",
+            "I appreciate you asking. Here's what I think...",
+            "You've raised an important question. Let me explain...",
+            "That's something I can definitely help you with!",
+            "Interesting! I have some thoughts on that..."
+        ];
+
+        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+        
+        // Add some context based on the user's message
+        if (userMessage.toLowerCase().includes('jamaica')) {
+            return "Jamaica is a beautiful Caribbean island nation known for its rich culture, music, and history. " + randomResponse;
+        } else if (userMessage.toLowerCase().includes('help')) {
+            return "I'm here to help! " + randomResponse;
+        } else {
+            return randomResponse + " Could you tell me more about what specifically you'd like to know?";
+        }
+    }
+
+    toggleVoiceInput() {
+        // Placeholder for voice input functionality
+        this.showNotification('Voice input feature coming soon!');
+    }
+
     scrollToBottom() {
-        const chatMessages = document.querySelector('.chat-messages');
-        if (chatMessages) {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+        const messagesContainer = document.querySelector('.chat-messages');
+        if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     }
-    
-    // Message Action Methods
-    copyMessage(button) {
-        const messageContent = button.closest('.message-content');
-        const messageText = this.extractTextFromMessage(messageContent);
-        
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(messageText).then(() => {
-                this.showNotification('Message copied to clipboard', 'success');
-            }).catch(() => {
-                this.fallbackCopy(messageText);
-            });
-        } else {
-            this.fallbackCopy(messageText);
-        }
-    }
-    
-    fallbackCopy(text) {
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        document.body.appendChild(textArea);
-        textArea.select();
-        
-        try {
-            document.execCommand('copy');
-            this.showNotification('Message copied to clipboard', 'success');
-        } catch (err) {
-            this.showNotification('Failed to copy message', 'error');
-        }
-        
-        document.body.removeChild(textArea);
-    }
-    
-    extractTextFromMessage(messageContent) {
-        const messageText = messageContent.querySelector('.message-text');
-        return messageText ? messageText.textContent : '';
-    }
-    
-    async regenerateResponse() {
-        if (this.chatHistory.length < 2) return;
-        
-        // Remove the last AI response
-        const lastMessage = this.chatHistory[this.chatHistory.length - 1];
-        if (lastMessage.type === 'assistant') {
-            this.chatHistory.pop();
-            
-            // Remove from UI
-            const lastMessageElement = document.querySelector(`[data-message-id="${lastMessage.id}"]`);
-            if (lastMessageElement) {
-                lastMessageElement.remove();
-            }
-            
-            // Get the user's last message and regenerate response
-            const lastUserMessage = this.chatHistory[this.chatHistory.length - 1];
-            if (lastUserMessage && lastUserMessage.type === 'user') {
-                this.showTypingIndicator();
-                this.isWaitingForResponse = true;
-                
-                try {
-                    const response = await this.getAIResponse(lastUserMessage.content);
-                    
-                    const aiMessage = {
-                        id: Date.now().toString(),
-                        type: 'assistant',
-                        content: response,
-                        timestamp: new Date()
-                    };
-                    
-                    this.chatHistory.push(aiMessage);
-                    this.hideTypingIndicator();
-                    this.addMessageToChat(aiMessage);
-                    this.saveCurrentChat();
-                    
-                } catch (error) {
-                    console.error('Error regenerating response:', error);
-                    this.hideTypingIndicator();
-                    this.showNotification('Failed to regenerate response', 'error');
-                } finally {
-                    this.isWaitingForResponse = false;
-                    this.toggleSendButton();
-                }
-            }
-        }
-    }
-    
-    // Chat Saving Methods
-    saveCurrentChat() {
-        if (!this.currentChatId || this.chatHistory.length === 0) return;
-        
-        const chatTitle = this.generateChatTitle();
-        const existingChatIndex = this.savedChats.findIndex(c => c.id === this.currentChatId);
-        
-        const chatData = {
-            id: this.currentChatId,
-            title: chatTitle,
-            messages: [...this.chatHistory],
-            timestamp: Date.now()
-        };
-        
-        if (existingChatIndex >= 0) {
-            this.savedChats[existingChatIndex] = chatData;
-        } else {
-            this.savedChats.unshift(chatData);
-        }
-        
-        // Keep only the latest 50 chats
-        if (this.savedChats.length > 50) {
-            this.savedChats = this.savedChats.slice(0, 50);
-        }
-        
-        this.saveChatData();
-        this.updateChatSidebar();
-    }
-    
-    generateChatTitle() {
-        if (this.chatHistory.length === 0) return 'New Chat';
-        
-        const firstUserMessage = this.chatHistory.find(m => m.type === 'user');
-        if (!firstUserMessage) return 'New Chat';
-        
-        let title = firstUserMessage.content.substring(0, 50);
-        if (firstUserMessage.content.length > 50) {
-            title += '...';
-        }
-        
-        return title;
-    }
-    
-    // Utility Methods
+
     showNotification(message, type = 'info') {
-        // Create notification element
+        const container = document.querySelector('.notification-container');
+        if (!container) return;
+
         const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
+        notification.className = 'notification';
         notification.textContent = message;
         
-        // Add to page
-        document.body.appendChild(notification);
-        
-        // Animate in
+        // Add different styles based on type
+        if (type === 'error') {
+            notification.style.background = 'rgba(220, 53, 69, 0.9)';
+        } else if (type === 'success') {
+            notification.style.background = 'rgba(40, 167, 69, 0.9)';
+        }
+
+        container.appendChild(notification);
+
+        // Trigger animation
         setTimeout(() => notification.classList.add('show'), 100);
-        
-        // Remove after delay
+
+        // Remove after 3 seconds
         setTimeout(() => {
             notification.classList.remove('show');
-            setTimeout(() => document.body.removeChild(notification), 300);
+            setTimeout(() => notification.remove(), 300);
         }, 3000);
+    }
+
+    loadChats() {
+        try {
+            const savedChats = localStorage.getItem('jamAI_chats');
+            const savedMessages = localStorage.getItem('jamAI_messages');
+            
+            if (savedChats) {
+                this.chats = JSON.parse(savedChats);
+            }
+            
+            if (savedMessages) {
+                const messagesData = JSON.parse(savedMessages);
+                this.messageHistory = new Map(messagesData);
+            }
+            
+            this.updateChatList();
+        } catch (error) {
+            console.error('Error loading chats:', error);
+            this.chats = [];
+            this.messageHistory = new Map();
+        }
+    }
+
+    saveChats() {
+        try {
+            localStorage.setItem('jamAI_chats', JSON.stringify(this.chats));
+            localStorage.setItem('jamAI_messages', JSON.stringify([...this.messageHistory]));
+        } catch (error) {
+            console.error('Error saving chats:', error);
+        }
     }
 }
 
-// Initialize the app when DOM is loaded
+// Initialize the chat app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    window.jamaicanAI = new JamaicanAI();
+    // Create notification container if it doesn't exist
+    if (!document.querySelector('.notification-container')) {
+        const notificationContainer = document.createElement('div');
+        notificationContainer.className = 'notification-container';
+        document.body.appendChild(notificationContainer);
+    }
+
+    // Initialize the chat application
+    window.chatApp = new ChatApp();
 });
 
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = JamaicanAI;
-}
+// Handle page visibility changes
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && window.chatApp) {
+        // Refresh the app when user returns to the page
+        const messageInput = document.getElementById('messageInput');
+        if (messageInput) {
+            messageInput.focus();
+        }
+    }
+});
+
+// Handle beforeunload to save state
+window.addEventListener('beforeunload', () => {
+    if (window.chatApp) {
+        window.chatApp.saveChats();
+    }
+});
