@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jamaican Siri - AI Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            background: #ffffff;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 800px;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            border: 1px solid #e5e5e5;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #1a5d1a, #228b22);
+            color: white;
+            padding: 20px;
+            border-radius: 18px 18px 0 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="50" font-size="30">🇯🇲</text></svg>') no-repeat center;
+            opacity: 0.1;
+            background-size: 60px;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 5px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            line-height: 1.4;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            background: #f0f0f0;
+            color: #333333;
+            margin-left: auto;
+            border-bottom-right-radius: 5px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .bot-message {
+            background: linear-gradient(135deg, #1a5d1a, #228b22);
+            color: white;
+            margin-right: auto;
+            border-bottom-left-radius: 5px;
+            position: relative;
+        }
+
+        .bot-message::before {
+            content: '🤖';
+            position: absolute;
+            left: -25px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .input-container {
+            padding: 20px;
+            border-top: 1px solid #e5e5e5;
+            display: flex;
+            gap: 10px;
+            background: #ffffff;
+            border-radius: 0 0 18px 18px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 1px solid #d1d5db;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .message-input:focus {
+            border-color: #1a5d1a;
+            box-shadow: 0 0 0 3px rgba(26, 93, 26, 0.1);
+        }
+
+        .send-button {
+            background: linear-gradient(135deg, #1a5d1a, #228b22);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .send-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(26, 93, 26, 0.3);
+        }
+
+        .send-button:active {
+            transform: scale(0.95);
+        }
+
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            background: #f1f1f1;
+            padding: 12px 18px;
+            border-radius: 18px;
+            margin-right: auto;
+        }
+
+        .typing-dots {
+            display: inline-flex;
+            gap: 4px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: #1a5d1a;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 600px) {
+            .chat-container {
+                height: 100vh;
+                border-radius: 0;
+            }
+            
+            .header {
+                border-radius: 0;
+            }
+            
+            .input-container {
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="header">
+            <h1>🇯🇲 Jamaican Siri</h1>
+            <p>Yuh digital bredrin weh deh yah fi help!</p>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message">
+                <p>Wah gwaan! Mi name Jamaican Siri and mi deh yah fi help yuh with anyting yuh need. Ask mi anyting bout Jamaica, culture, food, music, or any other ting!</p>
+            </div>
+        </div>
+        
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        
+        <div class="input-container">
+            <input type="text" class="message-input" id="messageInput" placeholder="Type yuh message here..." maxlength="500">
+            <button class="send-button" id="sendButton">➤</button>
+        </div>
+    </div>
+
+    <script>
+        class JamaicanSiri {
+            constructor() {
+                this.messageInput = document.getElementById('messageInput');
+                this.sendButton = document.getElementById('sendButton');
+                this.chatMessages = document.getElementById('chatMessages');
+                this.typingIndicator = document.getElementById('typingIndicator');
+                
+                this.responses = {
+                    greetings: [
+                        "Wah gwaan bredrin! How yuh stay?",
+                        "Big up yuself! Wah yuh need help wid?",
+                        "Irie yute! Mi deh yah fi yuh!",
+                        "Bless up! How mi can help yuh today?",
+                        "Wah happen star! Everyting cool?"
+                    ],
+                    
+                    food: [
+                        "Yow! Yuh waan know bout Jamaican food? Mi love ackee and saltfish, curry goat, rice and peas, and some nice jerk chicken! Which one yuh waan hear bout?",
+                        "Food nice eeh! Yuh should try some bammy, festival, or plantain. And don't forget bout patty - dat a real Jamaican ting!",
+                        "Mi belly full just a tink bout curry chicken, brown stew fish, and some nice mannish water! Yuh hungry now?",
+                        "Yard food different yuh see! Try some oxtail, escovitch fish, or callaloo. Dat wi mek yuh feel good!"
+                    ],
+                    
+                    music: [
+                        "Music a wi life! Bob Marley, Jimmy Cliff, Toots and the Maytals - dem set di foundation. Now wi have Popcaan, Spice, Shenseea a carry on di legacy!",
+                        "Reggae, dancehall, ska - all a dat come from yard! Yuh love good music? Listen some Chronixx, Protoje, or Koffee fi di new generation!",
+                        "From Studio One to nowadays, Jamaican music sweet yuh know! Which artiste yuh like? Tell mi bout yuh favorite song!",
+                        "Music inna wi DNA! From Buju Banton to Vybz Kartel to Shaggy - wi have vibes fi every mood!"
+                    ],
+                    
+                    culture: [
+                        "Jamaica culture rich yuh see! Wi have Carnival, Independence Day, Emancipation Day. Wi love fi celebrate and have a good time!",
+                        "Wi culture mix up nice - African, European, Indian, Chinese - all blend together fi mek wi unique Jamaican identity!",
+                        "From nine night to wedding, wi know how fi party! And wi respect wi elders and community spirit!",
+                        "Jamaican culture bout family, respect, hard work, and enjoying life. Wi motto 'Out of Many, One People' seh everyting!"
+                    ],
+                    
+                    places: [
+                        "Jamaica beautiful eeh mon! Yuh have Dunn's River Falls, Blue Mountains, Negril beach, Port Royal - nuff place fi visit!",
+                        "From Kingston to Montego Bay, from Ocho Rios to Port Antonio - every parish have something special fi offer!",
+                        "Blue Mountain coffee a di best inna di world! And di beaches dem white like flour - yuh haffi come see fi yuself!",
+                        "Whether yuh inna town or country, Jamaica have beauty everywhere. Di people friendly and di vibes good!"
+                    ],
+                    
+                    help: [
+                        "Mi can help yuh with plenty tings! Ask mi bout Jamaican culture, food, music, places fi visit, patois words, or anyting else yuh curious bout!",
+                        "From yard to foreign, mi can give yuh advice bout Jamaica life, culture, and anyting yuh waan know. Just ask mi!",
+                        "Mi deh yah fi answer question, give advice, translate patois, or just reason with yuh. Wah yuh waan know?",
+                        "Anything bout Jamaica or Caribbean life, mi can help! Just talk to mi like yuh a talk to yuh bredrin!"
+                    ],
+                    
+                    default: [
+                        "Hmm, mi nuh too sure bout dat one. But tell mi more and maybe mi can help yuh better!",
+                        "Dat interesting! Yuh can ask mi bout Jamaica culture, food, music, or anything else yuh waan know!",
+                        "Mi nuh fully understand, but mi willing fi learn! Explain it to mi again?",
+                        "Yuh know wah? Ask mi something bout Jamaica or Caribbean life - dat's where mi expertise deh!",
+                        "Mi a think bout dat... Maybe yuh can ask mi bout Jamaican food, music, or culture instead?"
+                    ]
+                };
+                
+                this.bindEvents();
+            }
+            
+            bindEvents() {
+                this.sendButton.addEventListener('click', () => this.sendMessage());
+                this.messageInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.sendMessage();
+                    }
+                });
+                this.messageInput.addEventListener('input', () => {
+                    this.sendButton.style.background = this.messageInput.value.trim() 
+                        ? 'linear-gradient(135deg, #1a5d1a, #228b22)' 
+                        : 'linear-gradient(135deg, #9ca3af, #6b7280)';
+                });
+            }
+            
+            sendMessage() {
+                const message = this.messageInput.value.trim();
+                if (!message) return;
+                
+                this.addMessage(message, 'user');
+                this.messageInput.value = '';
+                this.sendButton.style.background = 'linear-gradient(135deg, #9ca3af, #6b7280)';
+                
+                this.showTyping();
+                setTimeout(() => {
+                    this.hideTyping();
+                    this.generateResponse(message);
+                }, 1000 + Math.random() * 1000);
+            }
+            
+            addMessage(text, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}-message`;
+                messageDiv.textContent = text;
+                
+                this.chatMessages.appendChild(messageDiv);
+                this.scrollToBottom();
+            }
+            
+            showTyping() {
+                this.typingIndicator.style.display = 'block';
+                this.scrollToBottom();
+            }
+            
+            hideTyping() {
+                this.typingIndicator.style.display = 'none';
+            }
+            
+            scrollToBottom() {
+                this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+            }
+            
+            generateResponse(userMessage) {
+                const msg = userMessage.toLowerCase();
+                let responses;
+                
+                // Greeting detection
+                if (msg.includes('hello') || msg.includes('hi') || msg.includes('hey') || 
+                    msg.includes('wah gwaan') || msg.includes('wagwan') || msg.includes('wappen')) {
+                    responses = this.responses.greetings;
+                }
+                // Food detection
+                else if (msg.includes('food') || msg.includes('eat') || msg.includes('hungry') || 
+                         msg.includes('ackee') || msg.includes('jerk') || msg.includes('curry') ||
+                         msg.includes('patty') || msg.includes('rice') || msg.includes('chicken')) {
+                    responses = this.responses.food;
+                }
+                // Music detection
+                else if (msg.includes('music') || msg.includes('song') || msg.includes('reggae') || 
+                         msg.includes('dancehall') || msg.includes('bob marley') || msg.includes('artist')) {
+                    responses = this.responses.music;
+                }
+                // Culture detection
+                else if (msg.includes('culture') || msg.includes('tradition') || msg.includes('festival') || 
+                         msg.includes('carnival') || msg.includes('independence')) {
+                    responses = this.responses.culture;
+                }
+                // Places detection
+                else if (msg.includes('place') || msg.includes('visit') || msg.includes('travel') || 
+                         msg.includes('kingston') || msg.includes('montego') || msg.includes('negril') ||
+                         msg.includes('beach') || msg.includes('mountain')) {
+                    responses = this.responses.places;
+                }
+                // Help detection
+                else if (msg.includes('help') || msg.includes('what can you') || msg.includes('assist')) {
+                    responses = this.responses.help;
+                }
+                // Default responses
+                else {
+                    responses = this.responses.default;
+                }
+                
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                this.addMessage(randomResponse, 'bot');
+            }
+        }
+        
+        // Initialize the chatbot when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new JamaicanSiri();
+        });
+    </script>
+</body>
+</html>
