@@ -1,88 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🇯🇲 Jamaican AI - Yuh Digital Bredrin</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <link rel="stylesheet" href="styles.css"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jamaican AI - Yuh Digital Bredrin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="app-container">
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <div class="logo">
-          <span class="flag">🇯🇲</span>
-          <span>Chat History</span>
-        </div>
-        <button class="toggle-sidebar">
-          <i class="fas fa-bars"></i>
-        </button>
-      </div>
-
-      <button class="new-chat-btn">
-        <i class="fas fa-plus"></i>
-        <span>New Chat</span>
-      </button>
-
-      <div class="chat-list"></div>
-    </div>
-
-    <!-- Overlay for mobile -->
+    <!-- Mobile Overlay -->
     <div class="overlay"></div>
 
-    <!-- Main Content -->
-    <div class="main-content">
-      <div class="chat-header">
-        <button class="mobile-sidebar-toggle">
-          <i class="fas fa-bars"></i>
+```
+<div class="main-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">
+                <span>🇯🇲</span>
+                <span>Chat History</span>
+            </div>
+            <button class="toggle-sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <button class="new-chat-btn">
+            <i class="fas fa-plus"></i>
+            <span>New Chat</span>
         </button>
-        <div class="chat-title-header">
-          <div class="ai-avatar-header"><span>🇯🇲</span></div>
-          <div class="header-text">
-            <h1>Jamaican AI</h1>
-            <p>Yuh digital bredrin weh deh yah fi help!</p>
-          </div>
+        
+        <div class="chat-history">
+            <div class="chat-list">
+                <!-- Chat history items will be populated by JavaScript -->
+            </div>
         </div>
-      </div>
-
-      <div class="chat-container">
-        <div class="chat-messages">
-          <div class="welcome-message">
-            <div class="welcome-header">
-              <div class="welcome-avatar">🇯🇲</div>
-              <div>
-                <div class="welcome-title">Welcome to Jamaican AI!</div>
-                <div class="welcome-subtitle">Yuh digital bredrin weh deh yah fi help!</div>
-              </div>
-            </div>
-            <div class="welcome-text">
-              Wah gwaan! Mi name Jamaican AI and mi deh yah fi help yuh with anything yuh need.
-              Ask mi anything bout Jamaica, culture, food, music, or any other ting!
-            </div>
-            <div class="suggestion-chips">
-              <div class="suggestion-chip">Tell mi bout Jamaican food</div>
-              <div class="suggestion-chip">Wah gwaan with the music scene?</div>
-              <div class="suggestion-chip">Best places fi visit inna Jamaica</div>
-              <div class="suggestion-chip">Teach mi some patois</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="input-container">
-          <div class="input-wrapper">
-            <textarea id="messageInput" placeholder="Type yuh message here..." rows="1"></textarea>
-            <div class="input-actions">
-              <button class="voice-btn" title="Voice input"><i class="fas fa-microphone"></i></button>
-              <button class="send-btn" disabled><i class="fas fa-paper-plane"></i></button>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
-  </div>
-  <div class="notification-container"></div>
-  <script src="script.js"></script>
+
+    <!-- Main Chat Container -->
+    <div class="chat-container">
+        <!-- Header -->
+        <div class="header">
+            <button class="mobile-sidebar-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="header-content">
+                <h1>🇯🇲 Jamaican AI</h1>
+                <p>Yuh digital bredrin weh deh yah fi help!</p>
+            </div>
+        </div>
+        
+        <!-- Chat Messages -->
+        <div class="chat-messages">
+            <!-- Welcome Message -->
+            <div class="welcome-message">
+                <div class="welcome-icon">🇯🇲</div>
+                <h2>Welcome to Jamaican AI!</h2>
+                <p>Wah gwaan! Mi name Jamaican AI and mi deh yah fi help yuh with anyting yuh need. Ask mi anyting bout Jamaica, culture, food, music, or any other ting!</p>
+                
+                <div class="suggestion-chips">
+                    <div class="suggestion-chip">Tell mi bout Jamaican food</div>
+                    <div class="suggestion-chip">Wah gwaan with the music scene?</div>
+                    <div class="suggestion-chip">Best places fi visit inna Jamaica</div>
+                    <div class="suggestion-chip">Teach mi some patois</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Input Container -->
+        <div class="input-container">
+            <div class="input-wrapper">
+                <textarea id="messageInput" class="message-input" placeholder="Type yuh message here..." rows="1" maxlength="2000"></textarea>
+                <div class="input-actions">
+                    <button class="voice-btn" title="Voice input">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button class="send-btn" title="Send message" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+```
+
 </body>
 </html>
