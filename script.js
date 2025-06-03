@@ -1,17 +1,28 @@
 // Jamaican AI - Frontend JavaScript Implementation
-// Ready for backend integration
+// Updated for First Edition Style with Advanced Features
 
 class JamaicanAI {
     constructor() {
         this.chatHistory = [];
         this.currentChatId = null;
-        this.savedChats = JSON.parse(localStorage.getItem('jamaicanAI_chats') || '[]');
+        this.savedChats = this.getSavedChats();
         this.isListening = false;
         this.recognition = null;
         this.synth = window.speechSynthesis;
         this.isWaitingForResponse = false;
         
         this.init();
+    }
+    
+    // Use in-memory storage instead of localStorage for artifact compatibility
+    getSavedChats() {
+        // In a real implementation, this would connect to your backend
+        return [];
+    }
+    
+    saveChatData() {
+        // In a real implementation, this would save to your backend
+        console.log('Saving chat data:', this.savedChats);
     }
     
     init() {
@@ -44,11 +55,6 @@ class JamaicanAI {
         const newChatBtn = document.querySelector('.new-chat-btn');
         if (newChatBtn) {
             newChatBtn.addEventListener('click', () => this.startNewChat());
-        }
-        
-        const newChatHeader = document.querySelector('.new-chat-header');
-        if (newChatHeader) {
-            newChatHeader.addEventListener('click', () => this.startNewChat());
         }
         
         // Message input handling
@@ -114,6 +120,7 @@ class JamaicanAI {
             this.recognition.onresult = (event) => {
                 const transcript = event.results[0][0].transcript;
                 document.getElementById('messageInput').value = transcript;
+                this.autoResizeTextarea();
                 this.toggleSendButton();
             };
             
@@ -199,7 +206,7 @@ class JamaicanAI {
             if (icon) {
                 icon.className = this.isListening ? 'fas fa-stop' : 'fas fa-microphone';
             }
-            voiceBtn.style.color = this.isListening ? '#ef4444' : '#666';
+            voiceBtn.style.color = this.isListening ? '#ef4444' : '';
         }
     }
     
@@ -240,7 +247,7 @@ class JamaicanAI {
     displayWelcomeMessage() {
         const welcomeMessage = document.querySelector('.welcome-message');
         if (welcomeMessage) {
-            welcomeMessage.style.display = 'flex';
+            welcomeMessage.style.display = 'block';
         }
     }
     
@@ -262,152 +269,248 @@ class JamaicanAI {
         }
     }
     
-    // Message Handling Methods
-    async sendMessage(message = null) {
-        const messageInput = document.getElementById('messageInput');
-        const text = message || messageInput?.value.trim();
+    loadChatHistory() {
+        this.updateChatSidebar();
+    }
+    
+    updateChatSidebar() {
+        const chatList = document.querySelector('.chat-list');
+        if (!chatList) return;
         
-        if (!text || this.isWaitingForResponse) return;
+        chatList.innerHTML = '';
         
-        // Hide welcome message on first message
+        this.savedChats.forEach(chat => {
+            const chatItem = this.createChatItem(chat);
+            chatList.appendChild(chatItem);
+        });
+    }
+    
+    createChatItem(chat) {
+        const item = document.createElement('div');
+        item.className = 'chat-item';
+        item.dataset.chatId = chat.id;
+        
+        const title = chat.title || 'New Chat';
+        const timestamp = new Date(chat.timestamp).toLocaleDateString();
+        
+        item.innerHTML = `
+            <div class="chat-item-content">
+                <div class="chat-title">${this.escapeHtml(title)}</div>
+                <div class="chat-timestamp">${timestamp}</div>
+            </div>
+            <div class="chat-actions">
+                <button class="chat-action-btn delete-chat" data-chat-id="${chat.id}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        
+        item.addEventListener('click', (e) => {
+            if (!e.target.closest('.chat-actions')) {
+                this.loadChat(chat.id);
+            }
+        });
+        
+        const deleteBtn = item.querySelector('.delete-chat');
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteChat(chat.id);
+        });
+        
+        return item;
+    }
+    
+    updateActiveChatItem(chatId) {
+        const chatItems = document.querySelectorAll('.chat-item');
+        chatItems.forEach(item => {
+            item.classList.toggle('active', item.dataset.chatId === chatId);
+        });
+    }
+    
+    loadChat(chatId) {
+        const chat = this.savedChats.find(c => c.id === chatId);
+        if (!chat) return;
+        
+        this.currentChatId = chatId;
+        this.chatHistory = [...chat.messages];
+        this.renderChatHistory();
+        this.updateActiveChatItem(chatId);
+        this.closeMobileSidebar();
+    }
+    
+    deleteChat(chatId) {
+        if (confirm('Are you sure you want to delete this chat?')) {
+            this.savedChats = this.savedChats.filter(c => c.id !== chatId);
+            this.saveChatData();
+            this.updateChatSidebar();
+            
+            if (this.currentChatId === chatId) {
+                this.startNewChat();
+            }
+        }
+    }
+    
+    renderChatHistory() {
         this.hideWelcomeMessage();
+        const chatMessages = document.querySelector('.chat-messages');
+        if (!chatMessages) return;
         
-        // Add user message to UI
-        this.addMessage('user', text);
+        chatMessages.innerHTML = '';
         
-        // Clear input
+        this.chatHistory.forEach(message => {
+            const messageElement = this.createMessageElement(message);
+            chatMessages.appendChild(messageElement);
+        });
+        
+        this.scrollToBottom();
+    }
+    
+    // Message Handling Methods
+    async sendMessage(messageText = null) {
+        const messageInput = document.getElementById('messageInput');
+        const message = messageText || messageInput?.value.trim();
+        
+        if (!message || this.isWaitingForResponse) return;
+        
+        // Clear input and hide welcome message
         if (messageInput) {
             messageInput.value = '';
-            messageInput.style.height = 'auto';
+            this.autoResizeTextarea();
         }
-        
-        // Update state
-        this.isWaitingForResponse = true;
+        this.hideWelcomeMessage();
         this.toggleSendButton();
         
-        // Add message to history
-        this.chatHistory.push({ 
-            role: 'user', 
-            content: text, 
-            timestamp: new Date().toISOString() 
-        });
+        // Add user message to chat
+        const userMessage = {
+            id: Date.now().toString(),
+            type: 'user',
+            content: message,
+            timestamp: new Date()
+        };
+        
+        this.chatHistory.push(userMessage);
+        this.addMessageToChat(userMessage);
         
         // Show typing indicator
         this.showTypingIndicator();
+        this.isWaitingForResponse = true;
         
         try {
-            // TODO: Replace with actual API call to your backend
-            const response = await this.callBackendAPI(text);
+            // Simulate AI response (replace with actual API call)
+            const response = await this.getAIResponse(message);
             
+            const aiMessage = {
+                id: (Date.now() + 1).toString(),
+                type: 'assistant',
+                content: response,
+                timestamp: new Date()
+            };
+            
+            this.chatHistory.push(aiMessage);
             this.hideTypingIndicator();
-            this.addMessage('assistant', response);
+            this.addMessageToChat(aiMessage);
             
-            // Add response to history
-            this.chatHistory.push({ 
-                role: 'assistant', 
-                content: response, 
-                timestamp: new Date().toISOString() 
-            });
-            
-            this.saveChatHistory();
+            // Save chat
+            this.saveCurrentChat();
             
         } catch (error) {
-            console.error('Error getting response:', error);
+            console.error('Error getting AI response:', error);
             this.hideTypingIndicator();
-            this.addMessage('assistant', "Sorry, mi having some technical difficulties right now. Please try again later!");
+            this.showNotification('Sorry, there was an error processing your message', 'error');
         } finally {
             this.isWaitingForResponse = false;
             this.toggleSendButton();
         }
     }
     
-    // TODO: Replace this with your actual backend API call
-    async callBackendAPI(message) {
-        // Simulate API call for now - replace with your backend endpoint
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve("This is a placeholder response. Connect this to your Jamaican AI backend!");
-            }, 1000 + Math.random() * 2000);
-        });
+    async getAIResponse(message) {
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
         
-        /* 
-        // Example of how to integrate with your backend:
-        const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                message: message,
-                chatId: this.currentChatId,
-                history: this.chatHistory
-            })
-        });
+        // Simple response generation (replace with actual AI API)
+        const responses = [
+            "Wah gwaan! Mi understand yuh question. Let mi help yuh with dat.",
+            "Bredrin, dat's a good question! Mi a go explain it fi yuh.",
+            "Big up yuself! Mi see weh yuh a ask bout. Check dis out...",
+            "Yuh know say mi always ready fi help! Here's weh mi think bout dat.",
+            "Respect! Dat's something weh nuff people wonder bout. Let mi break it down fi yuh."
+        ];
         
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
+        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+        
+        // Add some context based on the message
+        let contextualResponse = randomResponse;
+        if (message.toLowerCase().includes('hello') || message.toLowerCase().includes('hi')) {
+            contextualResponse = "Wah gwaan, bredrin! How yuh doing today? Mi ready fi help yuh with anything yuh need!";
+        } else if (message.toLowerCase().includes('thanks') || message.toLowerCase().includes('thank you')) {
+            contextualResponse = "No problem at all, mi friend! Mi glad fi help yuh. Anytime yuh need something, just holla at mi!";
         }
         
-        const data = await response.json();
-        return data.response;
-        */
+        return contextualResponse;
     }
     
-    addMessage(role, content) {
+    addMessageToChat(message) {
         const chatMessages = document.querySelector('.chat-messages');
         if (!chatMessages) return;
         
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${role}`;
-        
-        const avatar = document.createElement('div');
-        avatar.className = 'message-avatar';
-        avatar.innerHTML = role === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
-        
-        const messageContent = document.createElement('div');
-        messageContent.className = 'message-content';
-        
-        // Handle message content (could be enhanced for markdown/formatting)
-        const textDiv = document.createElement('div');
-        textDiv.textContent = content;
-        messageContent.appendChild(textDiv);
-        
-        // Add action buttons
-        const messageActions = this.createMessageActions(role, content);
-        messageContent.appendChild(messageActions);
-        
-        messageDiv.appendChild(avatar);
-        messageDiv.appendChild(messageContent);
-        
-        chatMessages.appendChild(messageDiv);
+        const messageElement = this.createMessageElement(message);
+        chatMessages.appendChild(messageElement);
         this.scrollToBottom();
     }
     
-    createMessageActions(role, content) {
-        const messageActions = document.createElement('div');
-        messageActions.className = 'message-actions';
+    createMessageElement(message) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${message.type}`;
+        messageDiv.dataset.messageId = message.id;
         
-        if (role === 'assistant') {
-            messageActions.innerHTML = `
+        const avatar = message.type === 'user' ? 
+            '<div class="avatar user-avatar"><i class="fas fa-user"></i></div>' :
+            '<div class="avatar ai-avatar"><i class="fas fa-robot"></i></div>';
+        
+        const actions = message.type === 'assistant' ? `
+            <div class="message-actions">
                 <button class="action-btn copy-btn" title="Copy message">
                     <i class="fas fa-copy"></i>
+                </button>
+                <button class="action-btn speak-btn" title="Read aloud">
+                    <i class="fas fa-volume-up"></i>
                 </button>
                 <button class="action-btn regenerate-btn" title="Regenerate response">
                     <i class="fas fa-redo"></i>
                 </button>
-                <button class="action-btn speak-btn" title="Speak message">
-                    <i class="fas fa-volume-up"></i>
-                </button>
-            `;
-        } else {
-            messageActions.innerHTML = `
-                <button class="action-btn copy-btn" title="Copy message">
-                    <i class="fas fa-copy"></i>
-                </button>
-            `;
-        }
+            </div>
+        ` : '';
         
-        return messageActions;
+        messageDiv.innerHTML = `
+            ${avatar}
+            <div class="message-content">
+                <div class="message-text">${this.formatMessage(message.content)}</div>
+                <div class="message-timestamp">${this.formatTimestamp(message.timestamp)}</div>
+                ${actions}
+            </div>
+        `;
+        
+        return messageDiv;
+    }
+    
+    formatMessage(text) {
+        // Basic formatting - convert newlines to <br> and handle basic markdown-like syntax
+        return this.escapeHtml(text)
+            .replace(/\n/g, '<br>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/`(.*?)`/g, '<code>$1</code>');
+    }
+    
+    formatTimestamp(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
     
     showTypingIndicator() {
@@ -415,16 +518,14 @@ class JamaicanAI {
         if (!chatMessages) return;
         
         const typingDiv = document.createElement('div');
-        typingDiv.className = 'message assistant typing-message';
+        typingDiv.className = 'message assistant typing-indicator';
         typingDiv.innerHTML = `
-            <div class="message-avatar">
-                <i class="fas fa-robot"></i>
-            </div>
+            <div class="avatar ai-avatar"><i class="fas fa-robot"></i></div>
             <div class="message-content">
-                <div class="typing-indicator">
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
                 </div>
             </div>
         `;
@@ -434,9 +535,9 @@ class JamaicanAI {
     }
     
     hideTypingIndicator() {
-        const typingMessage = document.querySelector('.typing-message');
-        if (typingMessage) {
-            typingMessage.remove();
+        const typingIndicator = document.querySelector('.typing-indicator');
+        if (typingIndicator) {
+            typingIndicator.remove();
         }
     }
     
@@ -450,187 +551,157 @@ class JamaicanAI {
     // Message Action Methods
     copyMessage(button) {
         const messageContent = button.closest('.message-content');
-        const text = this.extractTextFromMessage(messageContent);
+        const messageText = this.extractTextFromMessage(messageContent);
         
-        navigator.clipboard.writeText(text).then(() => {
-            const originalHTML = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-check"></i>';
-            button.style.color = '#10a37f';
-            
-            setTimeout(() => {
-                button.innerHTML = originalHTML;
-                button.style.color = '';
-            }, 2000);
-        }).catch(err => {
-            console.error('Failed to copy text: ', err);
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(messageText).then(() => {
+                this.showNotification('Message copied to clipboard', 'success');
+            }).catch(() => {
+                this.fallbackCopy(messageText);
+            });
+        } else {
+            this.fallbackCopy(messageText);
+        }
+    }
+    
+    fallbackCopy(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+            this.showNotification('Message copied to clipboard', 'success');
+        } catch (err) {
             this.showNotification('Failed to copy message', 'error');
-        });
+        }
+        
+        document.body.removeChild(textArea);
     }
     
     extractTextFromMessage(messageContent) {
-        const textDiv = messageContent.querySelector('div:not(.message-actions)');
-        return textDiv ? textDiv.textContent.trim() : '';
+        const messageText = messageContent.querySelector('.message-text');
+        return messageText ? messageText.textContent : '';
     }
     
     async regenerateResponse() {
-        if (this.isWaitingForResponse) return;
+        if (this.chatHistory.length < 2) return;
         
-        const messages = document.querySelectorAll('.message');
-        if (messages.length >= 2) {
-            const lastUserMessage = messages[messages.length - 2];
-            const userText = this.extractTextFromMessage(lastUserMessage.querySelector('.message-content'));
-            
-            // Remove last assistant message from UI and history
-            const lastAssistantMessage = messages[messages.length - 1];
-            lastAssistantMessage.remove();
+        // Remove the last AI response
+        const lastMessage = this.chatHistory[this.chatHistory.length - 1];
+        if (lastMessage.type === 'assistant') {
             this.chatHistory.pop();
             
-            // Generate new response
-            this.isWaitingForResponse = true;
-            this.showTypingIndicator();
+            // Remove from UI
+            const lastMessageElement = document.querySelector(`[data-message-id="${lastMessage.id}"]`);
+            if (lastMessageElement) {
+                lastMessageElement.remove();
+            }
             
-            try {
-                const response = await this.callBackendAPI(userText);
-                this.hideTypingIndicator();
-                this.addMessage('assistant', response);
+            // Get the user's last message and regenerate response
+            const lastUserMessage = this.chatHistory[this.chatHistory.length - 1];
+            if (lastUserMessage && lastUserMessage.type === 'user') {
+                this.showTypingIndicator();
+                this.isWaitingForResponse = true;
                 
-                this.chatHistory.push({ 
-                    role: 'assistant', 
-                    content: response, 
-                    timestamp: new Date().toISOString() 
-                });
-                
-                this.saveChatHistory();
-            } catch (error) {
-                console.error('Error regenerating response:', error);
-                this.hideTypingIndicator();
-                this.addMessage('assistant', "Sorry, mi having some technical difficulties right now. Please try again later!");
-            } finally {
-                this.isWaitingForResponse = false;
+                try {
+                    const response = await this.getAIResponse(lastUserMessage.content);
+                    
+                    const aiMessage = {
+                        id: Date.now().toString(),
+                        type: 'assistant',
+                        content: response,
+                        timestamp: new Date()
+                    };
+                    
+                    this.chatHistory.push(aiMessage);
+                    this.hideTypingIndicator();
+                    this.addMessageToChat(aiMessage);
+                    this.saveCurrentChat();
+                    
+                } catch (error) {
+                    console.error('Error regenerating response:', error);
+                    this.hideTypingIndicator();
+                    this.showNotification('Failed to regenerate response', 'error');
+                } finally {
+                    this.isWaitingForResponse = false;
+                    this.toggleSendButton();
+                }
             }
         }
     }
     
-    // Chat History Management
-    saveChatHistory() {
-        if (this.currentChatId && this.chatHistory.length > 0) {
-            const existingChatIndex = this.savedChats.findIndex(chat => chat.id === this.currentChatId);
-            const chatData = {
-                id: this.currentChatId,
-                title: this.generateChatTitle(),
-                messages: this.chatHistory,
-                timestamp: new Date().toISOString()
-            };
-            
-            if (existingChatIndex >= 0) {
-                this.savedChats[existingChatIndex] = chatData;
-            } else {
-                this.savedChats.unshift(chatData);
-            }
-            
-            // Keep only last 50 chats
-            this.savedChats = this.savedChats.slice(0, 50);
-            localStorage.setItem('jamaicanAI_chats', JSON.stringify(this.savedChats));
-            this.updateChatList();
+    // Chat Saving Methods
+    saveCurrentChat() {
+        if (!this.currentChatId || this.chatHistory.length === 0) return;
+        
+        const chatTitle = this.generateChatTitle();
+        const existingChatIndex = this.savedChats.findIndex(c => c.id === this.currentChatId);
+        
+        const chatData = {
+            id: this.currentChatId,
+            title: chatTitle,
+            messages: [...this.chatHistory],
+            timestamp: Date.now()
+        };
+        
+        if (existingChatIndex >= 0) {
+            this.savedChats[existingChatIndex] = chatData;
+        } else {
+            this.savedChats.unshift(chatData);
         }
+        
+        // Keep only the latest 50 chats
+        if (this.savedChats.length > 50) {
+            this.savedChats = this.savedChats.slice(0, 50);
+        }
+        
+        this.saveChatData();
+        this.updateChatSidebar();
     }
     
     generateChatTitle() {
-        const userMessages = this.chatHistory.filter(msg => msg.role === 'user');
-        if (userMessages.length > 0) {
-            const firstMessage = userMessages[0].content;
-            return firstMessage.length > 30 ? firstMessage.substring(0, 30) + '...' : firstMessage;
+        if (this.chatHistory.length === 0) return 'New Chat';
+        
+        const firstUserMessage = this.chatHistory.find(m => m.type === 'user');
+        if (!firstUserMessage) return 'New Chat';
+        
+        let title = firstUserMessage.content.substring(0, 50);
+        if (firstUserMessage.content.length > 50) {
+            title += '...';
         }
-        return 'New Chat';
-    }
-    
-    loadChatHistory() {
-        this.updateChatList();
-    }
-    
-    updateChatList() {
-        const chatList = document.querySelector('.chat-list');
-        if (!chatList) return;
         
-        chatList.innerHTML = '';
-        
-        this.savedChats.forEach(chat => {
-            const chatItem = document.createElement('button');
-            chatItem.className = 'chat-item';
-            chatItem.textContent = chat.title;
-            chatItem.dataset.chatId = chat.id;
-            chatItem.addEventListener('click', () => this.loadChat(chat.id));
-            chatList.appendChild(chatItem);
-        });
-    }
-    
-    loadChat(chatId) {
-        const chat = this.savedChats.find(c => c.id === chatId);
-        if (chat) {
-            this.currentChatId = chatId;
-            this.chatHistory = [...chat.messages];
-            this.displayChat();
-            this.updateActiveChatItem(chatId);
-            this.closeMobileSidebar();
-        }
-    }
-    
-    displayChat() {
-        this.clearChatMessages();
-        this.hideWelcomeMessage();
-        
-        this.chatHistory.forEach(message => {
-            this.addMessage(message.role, message.content);
-        });
-    }
-    
-    updateActiveChatItem(chatId) {
-        const chatItems = document.querySelectorAll('.chat-item');
-        chatItems.forEach(item => {
-            item.classList.remove('active');
-            if (item.dataset.chatId === chatId) {
-                item.classList.add('active');
-            }
-        });
+        return title;
     }
     
     // Utility Methods
     showNotification(message, type = 'info') {
-        // Simple notification system - you can enhance this
+        // Create notification element
         const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${type === 'error' ? '#ef4444' : '#10a37f'};
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            z-index: 10000;
-            font-size: 14px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        `;
+        notification.className = `notification ${type}`;
         notification.textContent = message;
         
+        // Add to page
         document.body.appendChild(notification);
         
+        // Animate in
+        setTimeout(() => notification.classList.add('show'), 100);
+        
+        // Remove after delay
         setTimeout(() => {
-            notification.remove();
+            notification.classList.remove('show');
+            setTimeout(() => document.body.removeChild(notification), 300);
         }, 3000);
     }
 }
 
-// Initialize the Jamaican AI when the page loads
-let jamaicanAI;
-
+// Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    jamaicanAI = new JamaicanAI();
-    
-    // Global function for inline event handlers (if needed)
-    window.jamaicanAI = jamaicanAI;
+    window.jamaicanAI = new JamaicanAI();
 });
 
-// Export for module usage if needed
+// Export for module usage
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = JamaicanAI;
 }
