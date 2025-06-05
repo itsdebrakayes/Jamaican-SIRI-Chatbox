@@ -12,10 +12,15 @@ function displaySuggestedPrompts() {
     let promptDiv = document.querySelector(".suggested-prompts");
     promptDiv.innerHTML = "";
     let shuffledPrompts = suggestedPrompts.sort(() => 0.5 - Math.random()).slice(0, 5);
+    
     shuffledPrompts.forEach(prompt => {
-        let btn = document.createElement("button");
+        let btn = document.createElement("div");  // Using div for better styling
+        btn.className = "suggestion-chip";
         btn.innerText = prompt;
-        btn.onclick = () => document.getElementById("userInput").value = prompt;
+        btn.onclick = () => {
+            document.getElementById("userInput").value = prompt;
+            sendMessage();
+        };
         promptDiv.appendChild(btn);
     });
 }

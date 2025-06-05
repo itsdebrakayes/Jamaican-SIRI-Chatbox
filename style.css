@@ -1,3 +1,4 @@
+/* General Styles */
 body {
     font-family: Arial, sans-serif;
     background: black;
@@ -9,18 +10,47 @@ body {
     margin: 0;
 }
 
+/* Chat Container */
 .chat-container {
     width: 400px;
     border: 3px solid gold;
     padding: 10px;
     background: green;
+    display: flex;
+    flex-direction: column;
 }
 
-header {
+/* Header */
+.header {
     text-align: center;
     color: gold;
 }
 
+.suggested-prompts {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+/* Oval-Shaped Suggestion Chips */
+.suggestion-chip {
+    padding: 8px 16px;
+    border-radius: 30px; /* Oval Shape */
+    background-color: #c3e6cb; /* Pale Green */
+    border: 2px solid #008000; /* Jamaican Green Outline */
+    color: #008000;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.suggestion-chip:hover {
+    background-color: #90ee90; /* Slightly Brighter Green */
+}
+
+/* Chat History */
 .chat-history {
     height: 300px;
     overflow-y: scroll;
@@ -30,20 +60,38 @@ header {
     margin-bottom: 10px;
 }
 
+/* Chat Box */
 .chat-box {
     display: flex;
+    gap: 10px;
 }
 
+/* Input Box */
 .chat-box input {
     flex: 1;
     padding: 8px;
     border: 2px solid black;
 }
 
-.chat-box button {
-    background: gold;
+/* Send & Voice Buttons */
+.send-btn {
+    background-color: #008000; /* Jamaican Green */
+    color: white;
+    padding: 8px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.voice-btn {
+    background-color: gold; /* Gold */
     color: black;
     padding: 8px;
     border: none;
     cursor: pointer;
+    border-radius: 5px;
+}
+
+.send-btn:hover, .voice-btn:hover {
+    opacity: 0.8;
 }
