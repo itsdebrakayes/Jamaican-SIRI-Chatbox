@@ -6,7 +6,7 @@ const suggestedPrompts = [
     "Show me some Jamaican dance moves 💃"
 ];
 
-const responses = require('./responses.json'); 
+const responses = require('./responses.json');
 
 function displaySuggestedPrompts() {
     let promptDiv = document.querySelector(".suggested-prompts");
@@ -14,7 +14,7 @@ function displaySuggestedPrompts() {
     let shuffledPrompts = suggestedPrompts.sort(() => 0.5 - Math.random()).slice(0, 5);
     
     shuffledPrompts.forEach(prompt => {
-        let btn = document.createElement("div");  // Using div for better styling
+        let btn = document.createElement("div");
         btn.className = "suggestion-chip";
         btn.innerText = prompt;
         btn.onclick = () => {

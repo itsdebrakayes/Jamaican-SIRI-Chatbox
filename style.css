@@ -4,7 +4,7 @@ body {
     background: black;
     color: white;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
     height: 100vh;
     margin: 0;
@@ -12,12 +12,13 @@ body {
 
 /* Chat Container */
 .chat-container {
-    width: 400px;
+    width: 600px;
     border: 3px solid gold;
     padding: 10px;
     background: green;
     display: flex;
     flex-direction: column;
+    border-radius: 10px;
 }
 
 /* Header */
@@ -38,9 +39,9 @@ body {
 /* Oval-Shaped Suggestion Chips */
 .suggestion-chip {
     padding: 8px 16px;
-    border-radius: 30px; /* Oval Shape */
-    background-color: #c3e6cb; /* Pale Green */
-    border: 2px solid #008000; /* Jamaican Green Outline */
+    border-radius: 30px;
+    background-color: #c3e6cb;
+    border: 2px solid #008000;
     color: #008000;
     font-weight: bold;
     cursor: pointer;
@@ -48,7 +49,7 @@ body {
 }
 
 .suggestion-chip:hover {
-    background-color: #90ee90; /* Slightly Brighter Green */
+    background-color: #90ee90;
 }
 
 /* Chat History */
@@ -76,7 +77,7 @@ body {
 
 /* Send & Voice Buttons */
 .send-btn {
-    background-color: #008000; /* Jamaican Green */
+    background-color: #008000;
     color: white;
     padding: 8px;
     border: none;
@@ -85,7 +86,7 @@ body {
 }
 
 .voice-btn {
-    background-color: gold; /* Gold */
+    background-color: gold;
     color: black;
     padding: 8px;
     border: none;
