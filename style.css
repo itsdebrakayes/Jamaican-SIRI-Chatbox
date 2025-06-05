@@ -1,4 +1,4 @@
-/* General Styles */
+/* General Layout */
 body {
     font-family: Arial, sans-serif;
     background: black;
@@ -26,6 +26,7 @@ body {
     color: gold;
 }
 
+/* Suggested Prompts */
 .suggested-prompts {
     display: flex;
     justify-content: center;
